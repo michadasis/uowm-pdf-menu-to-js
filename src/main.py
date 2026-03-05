@@ -11,7 +11,9 @@ Usage:
     output_js defaults to restaurantMenu.js in the current directory.
 
 Dependencies:
-    pip install pdfplumber --break-system-packages
+    pip install pdfplumber 
+    or 
+    pip install -r requirements.txt
 """
 
 import sys
@@ -20,7 +22,7 @@ from utils import build_js, school_year_cycle_stats, parse_week_from_page
 try:
     import pdfplumber
 except ImportError:
-    sys.exit("Missing dependency.  Run:  pip install pdfplumber --break-system-packages")
+    sys.exit("Missing dependency.  Run:  'pip install pdfplumber' or 'pip install -r requirements.txt'")
 
 
 def main():
