@@ -70,5 +70,5 @@ When you run the script it prints a short summary to the console showing how the
   full_cycles                              20
   partial_weeks_in_last_cycle              0
 --------------------------------------------------------------
-
+```
 ---
