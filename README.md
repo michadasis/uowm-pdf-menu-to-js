@@ -12,8 +12,6 @@ pip install pdfplumber
 If you are on a system managed Python install (Arch, for example) you may need to use a virtual environment:
 
 ```bash
-```bash
-```
 python -m venv .venv
 source .venv/bin/activate   # bash/zsh
 source .venv/bin/activate.fish  # fish
