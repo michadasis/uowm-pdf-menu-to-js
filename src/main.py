@@ -1,28 +1,26 @@
 """
 Reads ΜΕΝΟΥ-YYYY.pdf and generates a restaurantMenu.js file.
 
-The number of weeks (N) is determined automatically from the PDF —
-one page = one week. The script also calculates how many times the
-N-week cycle repeats across the school year and prints the stats.
+The number of weeks (N) is determined automatically from the PDF -
+one page = one week.
 
 Usage:
-    python pdf_to_menu.py <input_pdf> [output_js]
+    python main.py <input_pdf> [output_js]
 
     output_js defaults to restaurantMenu.js in the current directory.
 
 Dependencies:
-    pip install pdfplumber 
-    or 
     pip install -r requirements.txt
 """
 
 import sys
-from utils import build_js, school_year_cycle_stats, parse_week_from_page
+from utils import build_js, parse_week_from_page
+from translate import translate_weeks
 
 try:
     import pdfplumber
 except ImportError:
-    sys.exit("Missing dependency.  Run:  'pip install pdfplumber' or 'pip install -r requirements.txt'")
+    sys.exit("Missing dependency. Run: pip install -r requirements.txt")
 
 
 def main():
@@ -34,20 +32,16 @@ def main():
 
     print(f"Reading PDF: {pdf_path}")
 
-    weeks = []
+    weeks_gr = []
     with pdfplumber.open(pdf_path) as pdf:
         num_pages = len(pdf.pages)
-        print(f"Pages found: {num_pages}  →  {num_pages} week(s) in menu cycle")
+        print(f"Pages found: {num_pages}  ->  {num_pages} week(s) in menu cycle")
         for page in pdf.pages:
-            weeks.append(parse_week_from_page(page))
+            weeks_gr.append(parse_week_from_page(page))
 
-    stats = school_year_cycle_stats(num_weeks=len(weeks))
+    weeks_en = translate_weeks(weeks_gr)
 
-    print("\nCycle stats")
-    for k, v in stats.items():
-        print(f"  {k:<40} {v}")
-
-    js_content = build_js(weeks, stats)
+    js_content = build_js(weeks_gr, weeks_en, len(weeks_gr))
 
     with open(js_path, "w", encoding="utf-8") as f:
         f.write(js_content)

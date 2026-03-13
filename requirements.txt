@@ -1,1 +1,2 @@
-pdfplumber 
+pdfplumber
+deep-translator

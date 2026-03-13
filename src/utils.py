@@ -1,6 +1,6 @@
-import re 
-from datetime import date, timedelta
-from constants import DAYS_EN, BREAKFAST, SKIP_RE
+import re
+from constants import DAYS_EN, BREAKFAST_GR, BREAKFAST_EN, SKIP_RE
+
 
 def should_skip(cell: str) -> bool:
     return not cell or SKIP_RE.match(cell.strip())
@@ -13,7 +13,6 @@ def clean(text) -> str:
 
 
 def extract_day_columns(table: list, num_days: int = 7) -> list[list[str]]:
-
     day_col_indices = None
     for row in table:
         cells = [clean(c) for c in row]
@@ -69,7 +68,6 @@ def get_day_col_indices(rows: list) -> list[int]:
     for row in rows:
         cells = [clean(c) for c in row]
         joined = " ".join(cells)
-        # Start counting after ΓΕΥΜΑ/ΔΕΙΠΝΟ section headers
         if "ΓΕΥΜΑ" in joined or "ΔΕΙΠΝΟ" in joined or "Πρώτο Πιάτο" in joined or "Κυρίως Πιάτο" in joined:
             in_data = True
             continue
@@ -92,7 +90,6 @@ def get_day_col_indices(rows: list) -> list[int]:
                     break
         if len(found) >= 5:
             indices = [found.get(d) for d in DAY_NAMES_GR]
-            # If Monday header is at col 1 but col 0 has data, shift Monday to 0
             if indices[0] == 1 and col_hits.get(0, 0) > 0:
                 indices[0] = 0
             return indices
@@ -120,7 +117,6 @@ def parse_section_from_rows(rows: list, day_col_indices: list) -> list[dict]:
             in_first, in_main = False, True
             continue
         if should_skip(cells[0] if cells else ""):
-            # Check for the Γλυκό/Φρούτο row
             vals = [cells[idx] if idx is not None and idx < len(cells) else ""
                     for idx in day_col_indices]
             if any(v in ("Γλυκό", "Φρούτο") for v in vals):
@@ -188,87 +184,53 @@ def parse_week_from_page(page) -> dict:
 
     return week
 
-def school_year_cycle_stats(
-    num_weeks: int,
-    start: date = date(2025, 9, 8),   # typical Greek school year start
-    end:   date = date(2026, 6, 12),  # typical Greek school year end
-) -> dict:
-    first_monday = start + timedelta(days=(7 - start.weekday()) % 7)
-    total_weeks  = 0
-    d = first_monday
-    while d <= end:
-        total_weeks += 1
-        d += timedelta(weeks=1)
-
-    full_cycles   = total_weeks // num_weeks
-    partial_weeks = total_weeks  % num_weeks
-
-    return {
-        "school_year_start": str(start),
-        "school_year_end":   str(end),
-        "total_school_weeks": total_weeks,
-        "menu_cycle_weeks":   num_weeks,
-        "full_cycles":        full_cycles,
-        "partial_weeks_in_last_cycle": partial_weeks,
-    }
-
 
 def py_to_js_array(lst: list) -> str:
     items = ", ".join(f'"{v}"' for v in lst)
     return f"[{items}]"
 
 
-def render_day(day_data: dict, indent: int = 6) -> str:
+def render_day(day_gr: dict, day_en: dict, indent: int = 6) -> str:
     pad  = " " * indent
     pad2 = " " * (indent + 2)
     lines = []
+
     lines.append(f"{pad}lunch: {{")
-    lines.append(f"{pad2}first: {py_to_js_array(day_data['lunch']['first'])},")
-    lines.append(f"{pad2}main:  {py_to_js_array(day_data['lunch']['main'])}")
+    lines.append(f"{pad2}first: {{ gr: {py_to_js_array(day_gr['lunch']['first'])}, en: {py_to_js_array(day_en['lunch']['first'])} }},")
+    lines.append(f"{pad2}main:  {{ gr: {py_to_js_array(day_gr['lunch']['main'])},  en: {py_to_js_array(day_en['lunch']['main'])}  }}")
     lines.append(f"{pad}}},")
     lines.append(f"{pad}dinner: {{")
-    lines.append(f"{pad2}first: {py_to_js_array(day_data['dinner']['first'])},")
-    lines.append(f"{pad2}main:  {py_to_js_array(day_data['dinner']['main'])}")
+    lines.append(f"{pad2}first: {{ gr: {py_to_js_array(day_gr['dinner']['first'])}, en: {py_to_js_array(day_en['dinner']['first'])} }},")
+    lines.append(f"{pad2}main:  {{ gr: {py_to_js_array(day_gr['dinner']['main'])},  en: {py_to_js_array(day_en['dinner']['main'])}  }}")
     lines.append(f"{pad}}},")
-    lines.append(f"{pad}extra: {py_to_js_array(day_data['extra'])}")
+    lines.append(f"{pad}extra: {{ gr: {py_to_js_array(day_gr['extra'])}, en: {py_to_js_array(day_en['extra'])} }}")
+
     return "\n".join(lines)
 
 
-def render_week(week_data: dict, week_num: int) -> str:
+def render_week(week_gr: dict, week_en: dict, week_num: int) -> str:
     lines = [f"  week{week_num}: {{"]
     for day in DAYS_EN:
         lines.append(f"    {day}: {{")
-        lines.append(render_day(week_data[day]))
+        lines.append(render_day(week_gr[day], week_en[day]))
         lines.append(f"    }},")
     lines.append(f"  }},")
     return "\n".join(lines)
 
 
-def render_breakfast(b: dict) -> str:
+def render_breakfast(b_gr: dict, b_en: dict) -> str:
     lines = ["  breakfast: {"]
-    for key, val in b.items():
-        lines.append(f"    {key}: {py_to_js_array(val)},")
+    for key in b_gr:
+        lines.append(f"    {key}: {{ gr: {py_to_js_array(b_gr[key])}, en: {py_to_js_array(b_en[key])} }},")
     lines.append("  },")
     return "\n".join(lines)
 
 
-def build_js(weeks: list[dict], stats: dict) -> str:
-    n = len(weeks)
-    header_comment = (
-        f"// Menu auto-generated from PDF  ({n}-week cycle)\n"
-        f"// School year: {stats['school_year_start']} → {stats['school_year_end']}\n"
-        f"// Total school weeks : {stats['total_school_weeks']}\n"
-        f"// Full {n}-week cycles: {stats['full_cycles']}  "
-        f"(+ {stats['partial_weeks_in_last_cycle']} partial week(s))\n"
-    )
-    parts = [header_comment, "export const menu = {"]
-    parts.append(f"  cycleWeeks: {n},")
-    parts.append(f"  totalSchoolWeeks: {stats['total_school_weeks']},")
-    parts.append(f"  fullCycles: {stats['full_cycles']},")
-    parts.append(f"  partialWeeks: {stats['partial_weeks_in_last_cycle']},")
-    parts.append(render_breakfast(BREAKFAST))
-    for i, week in enumerate(weeks, start=1):
-        parts.append(render_week(week, i))
+def build_js(weeks_gr: list[dict], weeks_en: list[dict], cycle_weeks: int) -> str:
+    parts = [f"// Menu auto-generated from PDF  ({cycle_weeks}-week cycle)\n", "export const menu = {"]
+    parts.append(f"  cycleWeeks: {cycle_weeks},")
+    parts.append(render_breakfast(BREAKFAST_GR, BREAKFAST_EN))
+    for i, (week_gr, week_en) in enumerate(zip(weeks_gr, weeks_en), start=1):
+        parts.append(render_week(week_gr, week_en, i))
     parts.append("};\n")
     return "\n".join(parts)
-

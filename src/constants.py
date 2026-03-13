@@ -1,14 +1,21 @@
-import re 
+import re
 
 # TODO: Those should be moved to a JSON file
 
 DAYS_EN = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
-BREAKFAST = {
+BREAKFAST_GR = {
     "drinks":  ["Τσάι", "Γάλα", "Χυμός"],
     "spreads": ["Μαρμελάδα 2 είδη", "Μέλι", "Βούτυρο", "Μαργαρίνη", "Τυρί Edam", "Ζαμπόν"],
     "breads":  ["Ψωμί Λευκό-μαύρο", "Φρυγανιές"],
     "staples": ["Αυγό", "Κέικ", "Corn Flakes (Δημητριακά)"],
+}
+
+BREAKFAST_EN = {
+    "drinks":  ["Tea", "Milk", "Juice"],
+    "spreads": ["Jam (2 varieties)", "Honey", "Butter", "Margarine", "Edam Cheese", "Ham"],
+    "breads":  ["White/Brown Bread", "Rusks"],
+    "staples": ["Egg", "Cake", "Corn Flakes (Cereal)"],
 }
 
 SKIP_PATTERNS = [
@@ -27,4 +34,3 @@ SKIP_PATTERNS = [
 ]
 
 SKIP_RE = re.compile("|".join(SKIP_PATTERNS))
-
