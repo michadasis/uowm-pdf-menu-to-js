@@ -227,7 +227,7 @@ def render_breakfast(b_gr: dict, b_en: dict) -> str:
 
 
 def build_js(weeks_gr: list[dict], weeks_en: list[dict], cycle_weeks: int) -> str:
-    parts = [f"// Menu auto-generated from PDF  ({cycle_weeks}-week cycle)\n", "export const menu = {"]
+    parts = [f"// Menu auto generated from PDF  ({cycle_weeks}-week cycle)\n", "export const menu = {"]
     parts.append(f"  cycleWeeks: {cycle_weeks},")
     parts.append(render_breakfast(BREAKFAST_GR, BREAKFAST_EN))
     for i, (week_gr, week_en) in enumerate(zip(weeks_gr, weeks_en), start=1):
