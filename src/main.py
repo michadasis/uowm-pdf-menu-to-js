@@ -1,18 +1,3 @@
-"""
-Reads ΜΕΝΟΥ-YYYY.pdf and generates a restaurantMenu.js file.
-
-The number of weeks (N) is determined automatically from the PDF -
-one page = one week.
-
-Usage:
-    python main.py <input_pdf> [output_js]
-
-    output_js defaults to restaurantMenu.js in the current directory.
-
-Dependencies:
-    pip install -r requirements.txt
-"""
-
 import sys
 from utils import build_js, parse_week_from_page
 from translate import translate_weeks

@@ -1,7 +1,4 @@
 import re
-
-# TODO: Those should be moved to a JSON file
-
 DAYS_EN = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
 BREAKFAST_GR = {

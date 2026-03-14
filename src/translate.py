@@ -1,15 +1,12 @@
 """
-translate.py
-------------
-Translates Greek meal names to English using Google Translate via deep-translator.
-No API key required.
+translates greek meal names to english using google translate via deep translator.
 """
 
 from deep_translator import GoogleTranslator
 
 
 def _get_all_strings(weeks: list[dict]) -> list[str]:
-    """Collect every unique Greek meal string across all weeks."""
+    """collect every unique greek meal string across all weeks"""
     seen = set()
     result = []
     for week in weeks:
@@ -28,10 +25,6 @@ def _get_all_strings(weeks: list[dict]) -> list[str]:
 
 
 def translate_weeks(weeks: list[dict]) -> list[dict]:
-    """
-    Returns a new list of week dicts with all meal strings translated to English.
-    Batches all unique strings into a single request where possible.
-    """
     strings = _get_all_strings(weeks)
     if not strings:
         return weeks
