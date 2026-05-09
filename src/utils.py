@@ -179,7 +179,8 @@ def parse_week_from_page(page) -> dict:
         week[day_en] = {
             "lunch":  {"first": lunch_days[i]["first"],  "main": lunch_days[i]["main"]},
             "dinner": {"first": dinner_days[i]["first"], "main": dinner_days[i]["main"]},
-            "extra":  lunch_days[i]["extra"] or dinner_days[i]["extra"],
+            "lunchExtra":  lunch_days[i]["extra"],
+            "dinnerExtra": dinner_days[i]["extra"],
         }
 
     return week
@@ -203,7 +204,8 @@ def render_day(day_gr: dict, day_en: dict, indent: int = 6) -> str:
     lines.append(f"{pad2}first: {{ gr: {py_to_js_array(day_gr['dinner']['first'])}, en: {py_to_js_array(day_en['dinner']['first'])} }},")
     lines.append(f"{pad2}main:  {{ gr: {py_to_js_array(day_gr['dinner']['main'])},  en: {py_to_js_array(day_en['dinner']['main'])}  }}")
     lines.append(f"{pad}}},")
-    lines.append(f"{pad}extra: {{ gr: {py_to_js_array(day_gr['extra'])}, en: {py_to_js_array(day_en['extra'])} }}")
+    lines.append(f"{pad}lunchExtra:  {{ gr: {py_to_js_array(day_gr['lunchExtra'])},  en: {py_to_js_array(day_en['lunchExtra'])}  }},")
+    lines.append(f"{pad}dinnerExtra: {{ gr: {py_to_js_array(day_gr['dinnerExtra'])}, en: {py_to_js_array(day_en['dinnerExtra'])} }}")
 
     return "\n".join(lines)
 

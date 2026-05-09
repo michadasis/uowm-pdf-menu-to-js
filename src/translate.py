@@ -17,10 +17,11 @@ def _get_all_strings(weeks: list[dict]) -> list[str]:
                         if item and item not in seen:
                             seen.add(item)
                             result.append(item)
-            for item in day.get("extra", []):
-                if item and item not in seen:
-                    seen.add(item)
-                    result.append(item)
+            for key in ("lunchExtra", "dinnerExtra"):
+                for item in day.get(key, []):
+                    if item and item not in seen:
+                        seen.add(item)
+                        result.append(item)
     return result
 
 
@@ -51,7 +52,8 @@ def translate_weeks(weeks: list[dict]) -> list[dict]:
                     "first": translate_list(day["dinner"]["first"]),
                     "main":  translate_list(day["dinner"]["main"]),
                 },
-                "extra": translate_list(day["extra"]),
+                "lunchExtra":  translate_list(day["lunchExtra"]),
+                "dinnerExtra": translate_list(day["dinnerExtra"]),
             }
         translated_weeks.append(translated_week)
 
