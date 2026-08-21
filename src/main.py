@@ -1,5 +1,5 @@
 import sys
-from utils import build_js, parse_week_from_page
+from utils import build_sql, parse_week_from_page
 from translate import translate_weeks
 
 try:
@@ -10,10 +10,10 @@ except ImportError:
 
 def main():
     if len(sys.argv) < 2:
-        sys.exit(f"Usage: python {sys.argv[0]} <input.pdf> [output.js]")
+        sys.exit(f"Usage: python {sys.argv[0]} <input.pdf> [output.sql]")
 
     pdf_path = sys.argv[1]
-    js_path  = sys.argv[2] if len(sys.argv) > 2 else "restaurantMenu.js"
+    sql_path = sys.argv[2] if len(sys.argv) > 2 else "restaurantMenu.sql"
 
     print(f"Reading PDF: {pdf_path}")
 
@@ -26,12 +26,12 @@ def main():
 
     weeks_en = translate_weeks(weeks_gr)
 
-    js_content = build_js(weeks_gr, weeks_en, len(weeks_gr))
+    sql_content = build_sql(weeks_gr, weeks_en, len(weeks_gr))
 
-    with open(js_path, "w", encoding="utf-8") as f:
-        f.write(js_content)
+    with open(sql_path, "w", encoding="utf-8") as f:
+        f.write(sql_content)
 
-    print(f"Written to: {js_path}")
+    print(f"Written to: {sql_path}")
 
 
 if __name__ == "__main__":

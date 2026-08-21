@@ -186,53 +186,97 @@ def parse_week_from_page(page) -> dict:
     return week
 
 
-def py_to_js_array(lst: list) -> str:
-    items = ", ".join(f'"{v}"' for v in lst)
-    return f"[{items}]"
+def sql_escape(text: str) -> str:
+    return text.replace("'", "''")
 
 
-def render_day(day_gr: dict, day_en: dict, indent: int = 6) -> str:
-    pad  = " " * indent
-    pad2 = " " * (indent + 2)
-    lines = []
+SCHEMA_SQL = """\
+CREATE TABLE IF NOT EXISTS menu_meta (
+    id SMALLINT PRIMARY KEY DEFAULT 1,
+    cycle_weeks INTEGER NOT NULL,
+    CONSTRAINT menu_meta_singleton CHECK (id = 1)
+);
 
-    lines.append(f"{pad}lunch: {{")
-    lines.append(f"{pad2}first: {{ gr: {py_to_js_array(day_gr['lunch']['first'])}, en: {py_to_js_array(day_en['lunch']['first'])} }},")
-    lines.append(f"{pad2}main:  {{ gr: {py_to_js_array(day_gr['lunch']['main'])},  en: {py_to_js_array(day_en['lunch']['main'])}  }}")
-    lines.append(f"{pad}}},")
-    lines.append(f"{pad}dinner: {{")
-    lines.append(f"{pad2}first: {{ gr: {py_to_js_array(day_gr['dinner']['first'])}, en: {py_to_js_array(day_en['dinner']['first'])} }},")
-    lines.append(f"{pad2}main:  {{ gr: {py_to_js_array(day_gr['dinner']['main'])},  en: {py_to_js_array(day_en['dinner']['main'])}  }}")
-    lines.append(f"{pad}}},")
-    lines.append(f"{pad}lunchExtra:  {{ gr: {py_to_js_array(day_gr['lunchExtra'])},  en: {py_to_js_array(day_en['lunchExtra'])}  }},")
-    lines.append(f"{pad}dinnerExtra: {{ gr: {py_to_js_array(day_gr['dinnerExtra'])}, en: {py_to_js_array(day_en['dinnerExtra'])} }}")
+CREATE TABLE IF NOT EXISTS breakfast_items (
+    id SERIAL PRIMARY KEY,
+    category TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    item_gr TEXT NOT NULL,
+    item_en TEXT NOT NULL
+);
 
-    return "\n".join(lines)
+CREATE TABLE IF NOT EXISTS menu_items (
+    id SERIAL PRIMARY KEY,
+    week_num INTEGER NOT NULL,
+    day_name TEXT NOT NULL,
+    meal_type TEXT NOT NULL,
+    course TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    item_gr TEXT NOT NULL,
+    item_en TEXT NOT NULL
+);
 
-
-def render_week(week_gr: dict, week_en: dict, week_num: int) -> str:
-    lines = [f"  week{week_num}: {{"]
-    for day in DAYS_EN:
-        lines.append(f"    {day}: {{")
-        lines.append(render_day(week_gr[day], week_en[day]))
-        lines.append(f"    }},")
-    lines.append(f"  }},")
-    return "\n".join(lines)
-
-
-def render_breakfast(b_gr: dict, b_en: dict) -> str:
-    lines = ["  breakfast: {"]
-    for key in b_gr:
-        lines.append(f"    {key}: {{ gr: {py_to_js_array(b_gr[key])}, en: {py_to_js_array(b_en[key])} }},")
-    lines.append("  },")
-    return "\n".join(lines)
+TRUNCATE TABLE menu_meta, breakfast_items, menu_items RESTART IDENTITY;
+"""
 
 
-def build_js(weeks_gr: list[dict], weeks_en: list[dict], cycle_weeks: int) -> str:
-    parts = [f"// Menu auto generated from PDF  ({cycle_weeks}-week cycle)\n", "export const menu = {"]
-    parts.append(f"  cycleWeeks: {cycle_weeks},")
-    parts.append(render_breakfast(BREAKFAST_GR, BREAKFAST_EN))
-    for i, (week_gr, week_en) in enumerate(zip(weeks_gr, weeks_en), start=1):
-        parts.append(render_week(week_gr, week_en, i))
-    parts.append("};\n")
+def render_breakfast_sql(b_gr: dict, b_en: dict) -> str:
+    rows = []
+    for category in b_gr:
+        for i, (gr, en) in enumerate(zip(b_gr[category], b_en[category]), start=1):
+            rows.append(f"('{sql_escape(category)}', {i}, '{sql_escape(gr)}', '{sql_escape(en)}')")
+
+    if not rows:
+        return ""
+
+    return (
+        "INSERT INTO breakfast_items (category, position, item_gr, item_en) VALUES\n"
+        + ",\n".join(rows)
+        + ";\n"
+    )
+
+
+def _course_rows(day_gr: dict, day_en: dict, meal_type: str, course: str) -> list[str]:
+    gr_items = day_gr[meal_type][course] if course in ("first", "main") else day_gr[f"{meal_type}Extra"]
+    en_items = day_en[meal_type][course] if course in ("first", "main") else day_en[f"{meal_type}Extra"]
+    return list(zip(gr_items, en_items))
+
+
+def render_menu_items_sql(weeks_gr: list[dict], weeks_en: list[dict]) -> str:
+    rows = []
+    for week_num, (week_gr, week_en) in enumerate(zip(weeks_gr, weeks_en), start=1):
+        for day in DAYS_EN:
+            day_gr, day_en = week_gr[day], week_en[day]
+            for meal_type in ("lunch", "dinner"):
+                for course in ("first", "main", "extra"):
+                    items = _course_rows(day_gr, day_en, meal_type, course)
+                    for i, (gr, en) in enumerate(items, start=1):
+                        rows.append(
+                            f"({week_num}, '{day}', '{meal_type}', '{course}', {i}, "
+                            f"'{sql_escape(gr)}', '{sql_escape(en)}')"
+                        )
+
+    if not rows:
+        return ""
+
+    return (
+        "INSERT INTO menu_items (week_num, day_name, meal_type, course, position, item_gr, item_en) VALUES\n"
+        + ",\n".join(rows)
+        + ";\n"
+    )
+
+
+def build_sql(weeks_gr: list[dict], weeks_en: list[dict], cycle_weeks: int) -> str:
+    parts = [f"-- Menu auto generated from PDF  ({cycle_weeks}-week cycle)\n", "BEGIN;\n", SCHEMA_SQL]
+    parts.append(f"INSERT INTO menu_meta (id, cycle_weeks) VALUES (1, {cycle_weeks});\n")
+
+    breakfast_sql = render_breakfast_sql(BREAKFAST_GR, BREAKFAST_EN)
+    if breakfast_sql:
+        parts.append(breakfast_sql)
+
+    menu_items_sql = render_menu_items_sql(weeks_gr, weeks_en)
+    if menu_items_sql:
+        parts.append(menu_items_sql)
+
+    parts.append("COMMIT;\n")
     return "\n".join(parts)
